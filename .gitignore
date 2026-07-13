@@ -1,15 +1,3 @@
 # macOS
 .DS_Store
 **/.DS_Store
-
-# Go
-/bin/
-*.exe
-*.out
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
-*.log
