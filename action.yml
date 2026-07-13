@@ -1,4 +1,4 @@
-name: 'Docker Image Sync With Crane'
+name: 'crane-plus'
 description: '一个基于 Crane 支持多模式的镜像同步工具'
 inputs:
   src:
