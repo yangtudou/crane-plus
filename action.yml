@@ -1,129 +1,154 @@
 name: registry-sync
 description: Sync container images between registries
-branding:
-  icon: 'refresh-cw'
-  color: 'blue'
 
 inputs:
   src:
-    description: 'Single source image'
+    description: Single source image
     required: false
   images:
-    description: 'Multiple images list'
+    description: Multiple images list (inline)
     required: false
-  file:
-    description: 'Image list file'
+  base:
+    description: Base image manifest file
     required: false
-  dst:
-    description: 'Destination registry'
+    default: images.txt
+  src-prefix:
+    description: Source registry prefix
+    required: false
+  src-flatten:
+    description: Flatten source path
+    required: false
+    default: "false"
+  dst-prefix:
+    description: Destination registry prefix
     required: true
+  dst-flatten:
+    description: Flatten destination path
+    required: false
+    default: "false"
   platform:
-    description: 'Target platform'
+    description: Target platform
     required: false
-    default: 'linux/amd64'
+    default: linux/amd64
   concurrency:
-    description: 'Worker concurrency'
+    description: Worker concurrency
     required: false
-    default: '4'
+    default: "4"
   retries:
-    description: 'Retry attempts'
+    description: Retry attempts
     required: false
-    default: '3'
-
-
-outputs:
-  sync-mode:
-    description: 'The mode used for syncing (single, batch, inline)'
-    value: ${{ steps.sync-step.outputs.MODE }}
-
+    default: "3"
+  dry-run:
+    description: Dry run mode
+    required: false
+    default: "false"
 
 runs:
   using: composite
   steps:
-    - name: Setup registry-sync
+    - name: Install registry-sync
       shell: bash
       run: |
-        echo "::group::🔧 环境准备 (Setup)"
-        BINARY_PATH="$GITHUB_ACTION_PATH/bin/registry-sync"
-        chmod +x "$BINARY_PATH"
-        echo "$GITHUB_ACTION_PATH/bin" >> $GITHUB_PATH
-        
-        if [ -x "$BINARY_PATH" ]; then
-          # 终端魔法：输出绿色的勾勾
-          echo -e "\033[32m✔ 二进制武器已就绪 (Executable Ready)\033[0m"
-        else
-          echo "::error title=Setup Issue::找不到文件或没权限！"
-          exit 1
-        fi
-        echo "::endgroup::"
+        set -e
+        echo "Installing registry-sync..."
+        chmod +x "$GITHUB_ACTION_PATH/bin/registry-sync"
+        sudo cp "$GITHUB_ACTION_PATH/bin/registry-sync" /usr/local/bin/registry-sync
+        registry-sync -h || true
 
-    - name: Execute registry-sync
-      id: sync-step
+    - name: Prepare images file
+      if: inputs.images != ''
       shell: bash
-      env:
-        INPUT_SRC: ${{ inputs.src }}
-        INPUT_IMAGES: ${{ inputs.images }}
-        INPUT_FILE: ${{ inputs.file }}
-        INPUT_DST: ${{ inputs.dst }}
-        INPUT_PLATFORM: ${{ inputs.platform }}
-        INPUT_CONCURRENCY: ${{ inputs.concurrency }}
-        INPUT_RETRIES: ${{ inputs.retries }}
       run: |
-        set -euo pipefail
+        set -e
+        cat << 'EOF' > /tmp/images.txt
+        ${{ inputs.images }}
+        EOF
+        echo "Prepared images from inline input."
 
-        # 定义几种好看的控制台颜色
-        C_CYAN='\033[0;36m'
-        C_YELLOW='\033[1;33m'
-        C_RESET='\033[0m'
+    - name: Show configuration
+      shell: bash
+      run: |
+        echo "================================"
+        echo "registry-sync configuration"
+        echo "================================"
+        echo "src:           ${{ inputs.src }}"
+        echo "base:          ${{ inputs.base }}"
+        echo "src-prefix:    ${{ inputs.src-prefix }}"
+        echo "src-flatten:   ${{ inputs.src-flatten }}"
+        echo "dst-prefix:    ${{ inputs.dst-prefix }}"
+        echo "dst-flatten:   ${{ inputs.dst-flatten }}"
+        echo "platform:      ${{ inputs.platform }}"
+        echo "concurrency:   ${{ inputs.concurrency }}"
+        echo "retries:       ${{ inputs.retries }}"
+        echo "dry-run:       ${{ inputs.dry-run }}"
+        echo "================================"
 
-        echo "::group::🚀 开始搬砖 (Executing Sync)"
-        
-        ARGS=(
-          "sync"
-          "--dst" "$INPUT_DST"
-          "--platform" "$INPUT_PLATFORM"
-          "--concurrency" "$INPUT_CONCURRENCY"
-          "--retries" "$INPUT_RETRIES"
-        )
+    - name: Run registry-sync
+      shell: bash
+      run: |
+        set -e
 
-        MODE_NAME=""
-        
-        if [ -n "$INPUT_SRC" ]; then
-          MODE_NAME="单体模式 (Single)"
-          echo -e "${C_CYAN}▶ 触发模式: ${MODE_NAME}${C_RESET}"
-          echo -e "${C_YELLOW}▶ 源镜像: ${INPUT_SRC}${C_RESET}"
-          registry-sync "${ARGS[@]}" --src "$INPUT_SRC"
+        SRC_FLATTEN=""
+        DST_FLATTEN=""
+        DRY_RUN=""
 
-        elif [ -n "$INPUT_FILE" ]; then
-          MODE_NAME="清单模式 (File)"
-          echo -e "${C_CYAN}▶ 触发模式: ${MODE_NAME}${C_RESET}"
-          echo -e "${C_YELLOW}▶ 读取文件: ${INPUT_FILE}${C_RESET}"
-          registry-sync "${ARGS[@]}" --file "$INPUT_FILE"
+        if [ "${{ inputs.src-flatten }}" = "true" ]; then
+          SRC_FLATTEN="--src-flatten"
+        fi
 
-        elif [ -n "$INPUT_IMAGES" ]; then
-          MODE_NAME="内联模式 (Inline)"
-          echo -e "${C_CYAN}▶ 触发模式: ${MODE_NAME}${C_RESET}"
-          printf "%s\n" "$INPUT_IMAGES" > /tmp/images.txt
-          registry-sync "${ARGS[@]}" --file /tmp/images.txt
+        if [ "${{ inputs.dst-flatten }}" = "true" ]; then
+          DST_FLATTEN="--dst-flatten"
+        fi
+
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          DRY_RUN="--dry-run"
+        fi
+
+        SRC_PREFIX_ARG=""
+        if [ -n "${{ inputs.src-prefix }}" ]; then
+          SRC_PREFIX_ARG="--src-prefix ${{ inputs.src-prefix }}"
+        fi
+
+        if [ -n "${{ inputs.src }}" ]; then
+          echo "Mode: single image"
+          registry-sync sync \
+            --src "${{ inputs.src }}" \
+            ${SRC_PREFIX_ARG} \
+            --dst-prefix "${{ inputs.dst-prefix }}" \
+            $SRC_FLATTEN \
+            $DST_FLATTEN \
+            $DRY_RUN \
+            --platform "${{ inputs.platform }}" \
+            --concurrency "${{ inputs.concurrency }}" \
+            --retries "${{ inputs.retries }}"
+
+        elif [ -n "${{ inputs.images }}" ]; then
+          echo "Mode: inline images"
+          registry-sync sync \
+            --base /tmp/images.txt \
+            ${SRC_PREFIX_ARG} \
+            --dst-prefix "${{ inputs.dst-prefix }}" \
+            $SRC_FLATTEN \
+            $DST_FLATTEN \
+            $DRY_RUN \
+            --platform "${{ inputs.platform }}" \
+            --concurrency "${{ inputs.concurrency }}" \
+            --retries "${{ inputs.retries }}"
+
+        elif [ -n "${{ inputs.base }}" ]; then
+          echo "Mode: image file"
+          registry-sync sync \
+            --base "${{ inputs.base }}" \
+            ${SRC_PREFIX_ARG} \
+            --dst-prefix "${{ inputs.dst-prefix }}" \
+            $SRC_FLATTEN \
+            $DST_FLATTEN \
+            $DRY_RUN \
+            --platform "${{ inputs.platform }}" \
+            --concurrency "${{ inputs.concurrency }}" \
+            --retries "${{ inputs.retries }}"
 
         else
-          echo "::error title=参数缺失::老铁，src / file / images 你总得填一个吧？"
+          echo "Error: no images specified"
           exit 1
         fi
-        echo "::endgroup::"
-        
-        # 气泡通知
-        echo "::notice title=任务完成::🎉 镜像已全部送达 $INPUT_DST"
-
-        # ==========================================
-        # 终极魔法：生成带 Markdown 表格的 Job Summary
-        # ==========================================
-        echo "### 🚀 镜像搬运报告 (Sync Report)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| 属性 | 参数值 |" >> $GITHUB_STEP_SUMMARY
-        echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-        echo "| **搬运模式** | \`$MODE_NAME\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **目标仓库** | \`$INPUT_DST\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **系统架构** | \`$INPUT_PLATFORM\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **并发线程** | \`$INPUT_CONCURRENCY\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **执行状态** | ✅ **成功** |" >> $GITHUB_STEP_SUMMARY
