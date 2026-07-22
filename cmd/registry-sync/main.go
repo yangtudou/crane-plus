@@ -8,10 +8,12 @@ import (
 
 	"github.com/yyysay/registry-sync/internal/config"
 	"github.com/yyysay/registry-sync/internal/destination"
+	"github.com/yyysay/registry-sync/internal/engine"
 	"github.com/yyysay/registry-sync/internal/image"
 	"github.com/yyysay/registry-sync/internal/mapper"
 	"github.com/yyysay/registry-sync/internal/output"
-	"github.com/yyysay/registry-sync/internal/task"
+	"github.com/yyysay/registry-sync/internal/rule"
+	"github.com/yyysay/registry-sync/internal/source"
 	"github.com/yyysay/registry-sync/internal/validate"
 )
 
@@ -73,12 +75,15 @@ func plan(args []string) {
 		log.Fatal(err)
 	}
 
-	dst := destination.New(
-		cfg.Destination.Registry,
-		mapper.New(cfg.Destination.RepositoryMode()),
-	)
+	rules, err := buildRules(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	tasks := task.Generate(images, dst)
+	tasks, err := engine.New(rules).Generate(images)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	switch *format {
 	case "json":
@@ -101,7 +106,7 @@ func validateCommand(args []string) {
 
 	imageFile := fs.String(
 		"images",
-		"images.txt",
+		"image list file",
 		"image list file",
 	)
 
@@ -127,4 +132,32 @@ func validateCommand(args []string) {
 
 	fmt.Println("config ok")
 	fmt.Println("images ok")
+}
+
+func buildRules(cfg *config.Config) ([]*rule.Rule, error) {
+	var rules []*rule.Rule
+
+	for _, item := range cfg.Rules {
+		mode := mapper.Basename
+
+		if item.Destination.Mode == "preserve" {
+			mode = mapper.Preserve
+		}
+
+		rules = append(rules,
+			rule.New(
+				item.Name,
+				source.New(
+					item.Source.Registry,
+					source.Default,
+				),
+				destination.New(
+					item.Destination.Registry,
+					mapper.New(mode),
+				),
+			),
+		)
+	}
+
+	return rules, nil
 }

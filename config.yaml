@@ -1,3 +1,14 @@
-destination:
-  registry: registry.cn-hangzhou.aliyuncs.com/myspace
-  mode: basename
+rules:
+  - name: docker-to-aliyun
+    source:
+      registry: docker.io
+    destination:
+      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      mode: basename
+
+  - name: ghcr-to-aliyun
+    source:
+      registry: ghcr.io
+    destination:
+      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      mode: basename

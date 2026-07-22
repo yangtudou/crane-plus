@@ -14,40 +14,43 @@ func TestConfig(t *testing.T) {
 		ok   bool
 	}{
 		{
-			name: "valid basename",
+			name: "valid",
 			cfg: config.Config{
-				Destination: config.Destination{
-					Registry: "registry.example.com/test",
-					Mode:     "basename",
+				Rules: []config.Rule{
+					{
+						Name: "docker",
+						Source: config.Source{
+							Registry: "docker.io",
+						},
+						Destination: config.Destination{
+							Registry: "registry.example.com/images",
+							Mode:     "basename",
+						},
+					},
 				},
 			},
 			ok: true,
 		},
 		{
-			name: "valid preserve",
+			name: "empty rules",
 			cfg: config.Config{
-				Destination: config.Destination{
-					Registry: "harbor.example.com",
-					Mode:     "preserve",
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "empty registry",
-			cfg: config.Config{
-				Destination: config.Destination{
-					Mode: "basename",
-				},
+				Rules: nil,
 			},
 			ok: false,
 		},
 		{
-			name: "invalid mode",
+			name: "empty registry",
 			cfg: config.Config{
-				Destination: config.Destination{
-					Registry: "registry.example.com",
-					Mode:     "unknown",
+				Rules: []config.Rule{
+					{
+						Name: "docker",
+						Source: config.Source{
+							Registry: "docker.io",
+						},
+						Destination: config.Destination{
+							Mode: "basename",
+						},
+					},
 				},
 			},
 			ok: false,

@@ -12,9 +12,20 @@ func TestLoad(t *testing.T) {
 	file := filepath.Join(dir, "config.yaml")
 
 	content := `
-destination:
-  registry: registry.cn-hangzhou.aliyuncs.com/myspace
-  mode: basename
+rules:
+  - name: docker-to-aliyun
+    source:
+      registry: docker.io
+    destination:
+      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      mode: basename
+
+  - name: ghcr-to-aliyun
+    source:
+      registry: ghcr.io
+    destination:
+      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      mode: preserve
 `
 
 	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
@@ -26,17 +37,29 @@ destination:
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if cfg.Destination.Registry != "registry.cn-hangzhou.aliyuncs.com/myspace" {
+	if len(cfg.Rules) != 2 {
+		t.Fatalf("Rules = %d, want 2", len(cfg.Rules))
+	}
+
+	if cfg.Rules[0].Name != "docker-to-aliyun" {
+		t.Fatalf("Name = %q", cfg.Rules[0].Name)
+	}
+
+	if cfg.Rules[0].Source.Registry != "docker.io" {
+		t.Fatalf("Source.Registry = %q", cfg.Rules[0].Source.Registry)
+	}
+
+	if cfg.Rules[0].Destination.Registry != "registry.cn-hangzhou.aliyuncs.com/myspace" {
 		t.Fatalf(
-			"Registry = %q",
-			cfg.Destination.Registry,
+			"Destination.Registry = %q",
+			cfg.Rules[0].Destination.Registry,
 		)
 	}
 
-	if cfg.Destination.Mode != "basename" {
+	if cfg.Rules[1].Destination.Mode != "preserve" {
 		t.Fatalf(
 			"Mode = %q",
-			cfg.Destination.Mode,
+			cfg.Rules[1].Destination.Mode,
 		)
 	}
 }

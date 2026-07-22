@@ -8,17 +8,38 @@ import (
 )
 
 func Config(cfg *config.Config) error {
-	if cfg.Destination.Registry == "" {
-		return fmt.Errorf("destination.registry is empty")
+	if len(cfg.Rules) == 0 {
+		return fmt.Errorf("rules is empty")
 	}
 
-	switch cfg.Destination.Mode {
-	case "basename", "preserve":
-	default:
-		return fmt.Errorf(
-			"unsupported destination.mode: %s",
-			cfg.Destination.Mode,
-		)
+	for _, r := range cfg.Rules {
+		if r.Name == "" {
+			return fmt.Errorf("rule name is empty")
+		}
+
+		if r.Source.Registry == "" {
+			return fmt.Errorf(
+				"rule %s source.registry is empty",
+				r.Name,
+			)
+		}
+
+		if r.Destination.Registry == "" {
+			return fmt.Errorf(
+				"rule %s destination.registry is empty",
+				r.Name,
+			)
+		}
+
+		switch r.Destination.Mode {
+		case "basename", "preserve":
+		default:
+			return fmt.Errorf(
+				"rule %s unsupported destination.mode: %s",
+				r.Name,
+				r.Destination.Mode,
+			)
+		}
 	}
 
 	return nil

@@ -3,12 +3,21 @@ package config
 import (
 	"os"
 
-	"github.com/yyysay/registry-sync/internal/mapper"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
+	Rules []Rule `yaml:"rules"`
+}
+
+type Rule struct {
+	Name        string      `yaml:"name"`
+	Source      Source      `yaml:"source"`
 	Destination Destination `yaml:"destination"`
+}
+
+type Source struct {
+	Registry string `yaml:"registry"`
 }
 
 type Destination struct {
@@ -29,13 +38,4 @@ func Load(filename string) (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-func (d Destination) RepositoryMode() mapper.RepositoryMode {
-	switch d.Mode {
-	case "preserve":
-		return mapper.Preserve
-	default:
-		return mapper.Basename
-	}
 }
