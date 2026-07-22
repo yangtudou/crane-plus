@@ -10,6 +10,7 @@ import (
 	"github.com/yyysay/registry-sync/internal/destination"
 	"github.com/yyysay/registry-sync/internal/image"
 	"github.com/yyysay/registry-sync/internal/mapper"
+	"github.com/yyysay/registry-sync/internal/output"
 	"github.com/yyysay/registry-sync/internal/task"
 )
 
@@ -69,11 +70,5 @@ func plan(args []string) {
 
 	tasks := task.Generate(images, dst)
 
-	for _, t := range tasks {
-		fmt.Printf(
-			"%s -> %s\n",
-			t.Source.Reference,
-			t.Target.Reference,
-		)
-	}
+	output.Print(tasks)
 }
