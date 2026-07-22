@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -14,27 +15,49 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: registry-sync <command>")
-		fmt.Println("commands:")
-		fmt.Println("  plan")
+		usage()
 		return
 	}
 
 	switch os.Args[1] {
 	case "plan":
-		plan()
+		plan(os.Args[2:])
 	default:
 		log.Fatalf("unknown command: %s", os.Args[1])
 	}
 }
 
-func plan() {
-	cfg, err := config.Load("config.yaml")
+func usage() {
+	fmt.Println("usage:")
+	fmt.Println("  registry-sync plan [options]")
+	fmt.Println()
+	fmt.Println("commands:")
+	fmt.Println("  plan")
+}
+
+func plan(args []string) {
+	fs := flag.NewFlagSet("plan", flag.ExitOnError)
+
+	configFile := fs.String(
+		"config",
+		"config.yaml",
+		"config file",
+	)
+
+	imageFile := fs.String(
+		"images",
+		"images.txt",
+		"image list file",
+	)
+
+	fs.Parse(args)
+
+	cfg, err := config.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	images, err := image.Load("images.txt")
+	images, err := image.Load(*imageFile)
 	if err != nil {
 		log.Fatal(err)
 	}
