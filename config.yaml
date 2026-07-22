@@ -4,8 +4,23 @@ runner:
   workers: 3
 
 
+images:
+  - "nginx:latest"
+  - "ghcr.io/sagernet/sing-box:latest"
+  - "ghcr.io/sagernet/sing-box:latest-testing"
+
 rules:
-  - name: mixed
-    destination:
-      registry: registry.local.y3-3am.top/aliyun
-      mode: basename
+  - match: all
+    target: registry.local.y3-3am.top/aliyun
+    mode: basename
+
+# 全局配置      
+log-level: info
+
+docker-library:
+  local:
+    registry.local.y3-3am.top:
+      - usename:
+      - password:
+  aliyun:
+    
