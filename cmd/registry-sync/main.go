@@ -51,6 +51,12 @@ func plan(args []string) {
 		"image list file",
 	)
 
+	format := fs.String(
+		"format",
+		"text",
+		"output format: text|json",
+	)
+
 	fs.Parse(args)
 
 	cfg, err := config.Load(*configFile)
@@ -70,5 +76,12 @@ func plan(args []string) {
 
 	tasks := task.Generate(images, dst)
 
-	output.Print(tasks)
+	switch *format {
+	case "json":
+		if err := output.PrintJSON(tasks); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		output.PrintText(tasks)
+	}
 }
