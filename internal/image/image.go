@@ -1,27 +1,80 @@
 package image
 
-// Image 表示一个规范化后的镜像引用。
 type Image struct {
-	// 用户原始输入
-	Raw string
-
-	// 唯一规范引用，例如：
-	// docker.io/library/nginx:latest
 	Reference string
 
-	// 仓库地址，例如：
-	// docker.io
-	// ghcr.io
-	Registry string
+	Registry  string
+	Namespace string
+	Name      string
+	Tag       string
+	Digest    string
+}
 
-	// namespace/repository，例如：
-	// library/nginx
-	// cloudflare/cloudflared
-	Name string
+func New(
+	registry string,
+	namespace string,
+	name string,
+	tag string,
+) *Image {
+	fullName := name
 
-	// latest
-	Tag string
+	if namespace != "" {
+		fullName = namespace + "/" + name
+	}
 
-	// sha256:...
-	Digest string
+	return &Image{
+		Registry:  NormalizeRegistry(registry),
+		Namespace: namespace,
+		Name:      fullName,
+		Tag:       tag,
+		Reference: buildReference(
+			registry,
+			namespace,
+			name,
+			tag,
+		),
+	}
+}
+
+func (i *Image) Repository() string {
+	return i.Name
+}
+
+func (i *Image) FullName() string {
+	name := i.Name
+
+	if i.Tag != "" {
+		name += ":" + i.Tag
+	}
+
+	if i.Digest != "" {
+		name += "@" + i.Digest
+	}
+
+	return name
+}
+
+func buildReference(
+	registry string,
+	namespace string,
+	name string,
+	tag string,
+) string {
+	ref := ""
+
+	if registry != "" {
+		ref += registry + "/"
+	}
+
+	if namespace != "" {
+		ref += namespace + "/"
+	}
+
+	ref += name
+
+	if tag != "" {
+		ref += ":" + tag
+	}
+
+	return ref
 }
