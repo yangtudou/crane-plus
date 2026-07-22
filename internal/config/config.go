@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"github.com/yyysay/registry-sync/internal/mapper"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,4 +29,13 @@ func Load(filename string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func (d Destination) RepositoryMode() mapper.RepositoryMode {
+	switch d.Mode {
+	case "preserve":
+		return mapper.Preserve
+	default:
+		return mapper.Basename
+	}
 }

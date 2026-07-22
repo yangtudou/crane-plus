@@ -22,15 +22,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mode := mapper.Basename
-
-	if cfg.Destination.Mode == "preserve" {
-		mode = mapper.Preserve
-	}
-
 	dst := destination.New(
 		cfg.Destination.Registry,
-		mapper.New(mode),
+		mapper.New(cfg.Destination.RepositoryMode()),
 	)
 
 	tasks := task.Generate(images, dst)
