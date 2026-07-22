@@ -1,7 +1,7 @@
 package destination
 
 import (
-	"path"
+	"strings"
 
 	"github.com/yyysay/registry-sync/internal/image"
 	"github.com/yyysay/registry-sync/internal/mapper"
@@ -9,29 +9,31 @@ import (
 
 type Destination struct {
 	Registry string
-	Mapper   *mapper.Mapper
+	mapper   *mapper.Mapper
 }
 
 func New(registry string, m *mapper.Mapper) *Destination {
 	return &Destination{
-		Registry: registry,
-		Mapper:   m,
+		Registry: strings.TrimRight(registry, "/"),
+		mapper:   m,
 	}
 }
 
-func (d *Destination) Map(src *image.Image) *image.Image {
-	dst := d.Mapper.Map(src)
+func (d *Destination) Map(img *image.Image) *image.Image {
+	mapped := d.mapper.Map(img)
 
-	dst.Registry = d.Registry
-	dst.Reference = buildReference(dst)
-
-	return dst
+	return &image.Image{
+		Reference: buildReference(d.Registry, mapped),
+		Registry:  d.Registry,
+		Namespace: mapped.Namespace,
+		Name:      mapped.Name,
+		Tag:       mapped.Tag,
+		Digest:    mapped.Digest,
+	}
 }
 
-func buildReference(img *image.Image) string {
-	ref := img.Registry + "/"
-
-	ref += path.Clean(img.Name)
+func buildReference(registry string, img *image.Image) string {
+	ref := registry + "/" + img.Name
 
 	if img.Tag != "" {
 		ref += ":" + img.Tag

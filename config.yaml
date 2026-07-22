@@ -1,14 +1,11 @@
-rules:
-  - name: docker-to-aliyun
-    source:
-      registry: docker.io
-    destination:
-      registry: registry.cn-hangzhou.aliyuncs.com/myspace
-      mode: basename
+runner:
+  type: crane
+  platform: linux/amd64
+  workers: 3
 
-  - name: ghcr-to-aliyun
-    source:
-      registry: ghcr.io
+
+rules:
+  - name: mixed
     destination:
-      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      registry: registry.local.y3-3am.top/aliyun
       mode: basename

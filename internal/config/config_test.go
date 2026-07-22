@@ -7,59 +7,172 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+
 	dir := t.TempDir()
 
-	file := filepath.Join(dir, "config.yaml")
+	file := filepath.Join(
+		dir,
+		"config.yaml",
+	)
 
 	content := `
-rules:
-  - name: docker-to-aliyun
-    source:
-      registry: docker.io
-    destination:
-      registry: registry.cn-hangzhou.aliyuncs.com/myspace
-      mode: basename
+runner:
+  type: crane
+  platform: linux/amd64
+  workers: 3
 
-  - name: ghcr-to-aliyun
+rules:
+
+  - name: ghcr
     source:
       registry: ghcr.io
     destination:
-      registry: registry.cn-hangzhou.aliyuncs.com/myspace
+      registry: registry.local.y3-3am.top/github
       mode: preserve
+
+  - name: mixed
+    destination:
+      registry: registry.local.y3-3am.top/aliyun
+      mode: basename
 `
 
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(
+		file,
+		[]byte(content),
+		0644,
+	); err != nil {
+
 		t.Fatal(err)
+
 	}
 
 	cfg, err := Load(file)
+
 	if err != nil {
-		t.Fatalf("Load() error = %v", err)
+		t.Fatalf(
+			"Load() error = %v",
+			err,
+		)
 	}
+
+	// runner
+
+	if cfg.Runner.Type != "crane" {
+
+		t.Fatalf(
+			"Runner.Type = %q",
+			cfg.Runner.Type,
+		)
+
+	}
+
+	if cfg.Runner.Platform != "linux/amd64" {
+
+		t.Fatalf(
+			"Runner.Platform = %q",
+			cfg.Runner.Platform,
+		)
+
+	}
+
+	if cfg.Runner.Workers != 3 {
+
+		t.Fatalf(
+			"Runner.Workers = %d",
+			cfg.Runner.Workers,
+		)
+
+	}
+
+	// rules count
 
 	if len(cfg.Rules) != 2 {
-		t.Fatalf("Rules = %d, want 2", len(cfg.Rules))
+
+		t.Fatalf(
+			"Rules = %d, want 2",
+			len(cfg.Rules),
+		)
+
 	}
 
-	if cfg.Rules[0].Name != "docker-to-aliyun" {
-		t.Fatalf("Name = %q", cfg.Rules[0].Name)
+	// normal rule
+
+	ghcr := cfg.Rules[0]
+
+	if ghcr.Name != "ghcr" {
+
+		t.Fatalf(
+			"Name = %q",
+			ghcr.Name,
+		)
+
 	}
 
-	if cfg.Rules[0].Source.Registry != "docker.io" {
-		t.Fatalf("Source.Registry = %q", cfg.Rules[0].Source.Registry)
+	if ghcr.Source.Registry != "ghcr.io" {
+
+		t.Fatalf(
+			"Source.Registry = %q",
+			ghcr.Source.Registry,
+		)
+
 	}
 
-	if cfg.Rules[0].Destination.Registry != "registry.cn-hangzhou.aliyuncs.com/myspace" {
+	if ghcr.Destination.Registry != "registry.local.y3-3am.top/github" {
+
 		t.Fatalf(
 			"Destination.Registry = %q",
-			cfg.Rules[0].Destination.Registry,
+			ghcr.Destination.Registry,
 		)
+
 	}
 
-	if cfg.Rules[1].Destination.Mode != "preserve" {
+	if ghcr.Destination.Mode != "preserve" {
+
 		t.Fatalf(
-			"Mode = %q",
-			cfg.Rules[1].Destination.Mode,
+			"Destination.Mode = %q",
+			ghcr.Destination.Mode,
 		)
+
 	}
+
+	// mixed rule
+
+	mixed := cfg.Rules[1]
+
+	if mixed.Name != "mixed" {
+
+		t.Fatalf(
+			"Name = %q",
+			mixed.Name,
+		)
+
+	}
+
+	if mixed.Source.Registry != "" {
+
+		t.Fatalf(
+			"mixed Source.Registry = %q, want empty",
+			mixed.Source.Registry,
+		)
+
+	}
+
+	if mixed.Destination.Registry != "registry.local.y3-3am.top/aliyun" {
+
+		t.Fatalf(
+			"mixed Destination.Registry = %q",
+			mixed.Destination.Registry,
+		)
+
+	}
+
+	if mixed.Destination.Mode != "basename" {
+
+		t.Fatalf(
+			"mixed Destination.Mode = %q",
+			mixed.Destination.Mode,
+		)
+
+	}
+
 }

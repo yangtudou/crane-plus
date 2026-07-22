@@ -7,7 +7,14 @@ import (
 )
 
 type Config struct {
-	Rules []Rule `yaml:"rules"`
+	Runner Runner `yaml:"runner"`
+	Rules  []Rule `yaml:"rules"`
+}
+
+type Runner struct {
+	Type     string `yaml:"type"`
+	Platform string `yaml:"platform"`
+	Workers  int    `yaml:"workers"`
 }
 
 type Rule struct {
@@ -26,7 +33,9 @@ type Destination struct {
 }
 
 func Load(filename string) (*Config, error) {
+
 	data, err := os.ReadFile(filename)
+
 	if err != nil {
 		return nil, err
 	}

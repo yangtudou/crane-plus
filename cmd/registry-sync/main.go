@@ -1,163 +1,57 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/yyysay/registry-sync/internal/config"
-	"github.com/yyysay/registry-sync/internal/destination"
-	"github.com/yyysay/registry-sync/internal/engine"
-	"github.com/yyysay/registry-sync/internal/image"
-	"github.com/yyysay/registry-sync/internal/mapper"
-	"github.com/yyysay/registry-sync/internal/output"
-	"github.com/yyysay/registry-sync/internal/rule"
-	"github.com/yyysay/registry-sync/internal/source"
-	"github.com/yyysay/registry-sync/internal/validate"
 )
 
 func main() {
+
 	if len(os.Args) < 2 {
 		usage()
 		return
 	}
 
 	switch os.Args[1] {
+
 	case "plan":
 		plan(os.Args[2:])
+
+	case "sync":
+		syncCommand(os.Args[2:])
+
 	case "validate":
 		validateCommand(os.Args[2:])
+
 	default:
-		log.Fatalf("unknown command: %s", os.Args[1])
+		log.Fatalf(
+			"unknown command: %s",
+			os.Args[1],
+		)
 	}
 }
 
 func usage() {
+
 	fmt.Println("usage:")
-	fmt.Println("  registry-sync <command>")
+	fmt.Println(
+		"  registry-sync <command>",
+	)
+
 	fmt.Println()
+
 	fmt.Println("commands:")
-	fmt.Println("  plan")
-	fmt.Println("  validate")
-}
 
-func plan(args []string) {
-	fs := flag.NewFlagSet("plan", flag.ExitOnError)
-
-	configFile := fs.String(
-		"config",
-		"config.yaml",
-		"config file",
+	fmt.Println(
+		"  plan",
 	)
 
-	imageFile := fs.String(
-		"images",
-		"images.txt",
-		"image list file",
+	fmt.Println(
+		"  sync",
 	)
 
-	format := fs.String(
-		"format",
-		"text",
-		"output format: text|json",
+	fmt.Println(
+		"  validate",
 	)
-
-	fs.Parse(args)
-
-	cfg, err := config.Load(*configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	images, err := image.Load(*imageFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rules, err := buildRules(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tasks, err := engine.New(rules).Generate(images)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	switch *format {
-	case "json":
-		if err := output.PrintJSON(tasks); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		output.PrintText(tasks)
-	}
-}
-
-func validateCommand(args []string) {
-	fs := flag.NewFlagSet("validate", flag.ExitOnError)
-
-	configFile := fs.String(
-		"config",
-		"config.yaml",
-		"config file",
-	)
-
-	imageFile := fs.String(
-		"images",
-		"image list file",
-		"image list file",
-	)
-
-	fs.Parse(args)
-
-	cfg, err := config.Load(*configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := validate.Config(cfg); err != nil {
-		log.Fatal(err)
-	}
-
-	images, err := image.Load(*imageFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := validate.Images(images); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("config ok")
-	fmt.Println("images ok")
-}
-
-func buildRules(cfg *config.Config) ([]*rule.Rule, error) {
-	var rules []*rule.Rule
-
-	for _, item := range cfg.Rules {
-		mode := mapper.Basename
-
-		if item.Destination.Mode == "preserve" {
-			mode = mapper.Preserve
-		}
-
-		rules = append(rules,
-			rule.New(
-				item.Name,
-				source.New(
-					item.Source.Registry,
-					source.Default,
-				),
-				destination.New(
-					item.Destination.Registry,
-					mapper.New(mode),
-				),
-			),
-		)
-	}
-
-	return rules, nil
 }
